@@ -34,7 +34,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"http://localhost:\d+",
+    allow_origin_regex=r"(http://localhost:\d+|https://mathscribe\.vercel\.app|https://.*\.vercel\.app)",
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )

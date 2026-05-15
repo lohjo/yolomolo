@@ -1,0 +1,100 @@
+.box {
+  padding: var(--sp-5) 0;
+  border-top: 1px solid var(--rule);
+  animation: slideUp 0.25s ease;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  animation: pulse 1s infinite;
+}
+
+.heading {
+  font: var(--t-section);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-2);
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 6px 0;
+  transition: opacity 0.3s;
+}
+
+.pending { opacity: 0.22; }
+.running { opacity: 1; }
+.done    { opacity: 0.50; }
+.error   { opacity: 1; }
+
+.icon {
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+
+.done .icon { color: var(--green); }
+.error .icon { color: var(--red); }
+
+.label {
+  flex: 1;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.running .label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.status {
+  font: var(--t-mono-sm);
+  color: var(--ink-4);
+}
+
+.running .status { color: var(--amber); }
+.done .status    { color: var(--green); }
+.error .status   { color: var(--red); }
+
+.runningDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber);
+  animation: pulse 0.8s infinite;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.finalizing {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border-top: 1px solid var(--rule);
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-4);
+  font: 600 12.5px var(--font-ui);
+  color: var(--green);
+}
+
+.finalizingDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 1s infinite;
+}

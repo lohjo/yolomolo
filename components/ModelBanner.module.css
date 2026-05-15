@@ -1,0 +1,20 @@
+.banner {
+  padding: 8px var(--sp-5);
+  font: var(--t-mono-sm);
+  text-align: center;
+  display: none;
+}
+
+.loading {
+  display: block;
+  background: var(--amber-bg);
+  color: var(--amber);
+  border-bottom: 1px solid var(--amber-border);
+}
+
+.error {
+  display: block;
+  background: var(--red-bg);
+  color: var(--red);
+  border-bottom: 1px solid var(--red-border);
+}

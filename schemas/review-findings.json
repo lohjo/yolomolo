@@ -1,0 +1,39 @@
+{
+  "name": "review_findings",
+  "description": "Output all code review findings as structured JSON",
+  "input_schema": {
+    "type": "object",
+    "required": ["findings", "summary", "reviewed_files"],
+    "additionalProperties": false,
+    "properties": {
+      "findings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["id", "file", "line", "severity", "category", "issue", "suggested_fix", "detected_pattern"],
+          "additionalProperties": false,
+          "properties": {
+            "id":               { "type": "string" },
+            "file":             { "type": "string" },
+            "line":             { "type": "integer" },
+            "severity":         { "enum": ["critical", "error", "warning", "info"] },
+            "category":         { "enum": ["security", "bug", "performance", "other"] },
+            "issue":            { "type": "string", "maxLength": 300 },
+            "suggested_fix":    { "type": "string", "maxLength": 500 },
+            "detected_pattern": { "type": "string" },
+            "confidence":       { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      },
+      "summary": {
+        "type": "object",
+        "properties": {
+          "critical_count":  { "type": "integer" },
+          "error_count":     { "type": "integer" },
+          "overall_verdict": { "enum": ["approve", "request_changes", "block"] }
+        }
+      },
+      "reviewed_files": { "type": "array", "items": { "type": "string" } }
+    }
+  }
+}

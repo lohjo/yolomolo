@@ -1,0 +1,36 @@
+@import "../styles/design-tokens.css";
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; min-height: 100%; }
+
+html, body {
+  background: var(--surface);
+  color: var(--ink);
+  font: var(--t-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1 { font: var(--t-h1); color: var(--ink); letter-spacing: -0.02em; }
+h2 { font: var(--t-h2); color: var(--ink); }
+h3 { font: var(--t-h3); color: var(--ink); }
+p  { font: var(--t-body); color: var(--ink-2); }
+
+a { color: inherit; }
+button { font: inherit; }
+
+code, pre, .mono {
+  font: var(--t-mono);
+  font-variant-ligatures: common-ligatures;
+  font-feature-settings: "liga" 1, "calt" 1;
+}
+
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse   { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes spin    { to { transform: rotate(360deg); } }
+@keyframes scanLine {
+  0%   { transform: translateY(0);     opacity: 0.8; }
+  50%  { transform: translateY(160px); opacity: 0.4; }
+  100% { transform: translateY(0);     opacity: 0.8; }
+}

@@ -5,14 +5,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-# Install backend dependencies (first time: ~250MB download)
+# ── Next.js app (primary) ──
+npm install              # Install frontend dependencies
+npm run dev              # Start Next.js dev server on :3000
+npm run build            # Production build
+npm run lint             # ESLint
+npm run test             # Vitest
+
+# ── Backend (deployed separately) ──
 pip install -r backend/requirements.txt
 
 # Run backend (from backend/)
 python -m uvicorn main:app --reload --port 8000
-
-# Run frontend (from frontend/ — camera requires HTTP, not file://)
-python -m http.server 3000
 
 # Docker (pix2tex only)
 docker compose up --build
@@ -36,9 +40,18 @@ Open http://localhost:3000. First run downloads pix2tex model (~100MB from Huggi
 
 ## Architecture
 
-Two-process local app. No build step anywhere.
+**Next.js 14 App Router** (root) — Vercel frontend + API gateway on :3000
+- `app/` — App Router pages and API routes
+- `app/api/convert/route.ts` — Proxies to FastAPI backend for pix2tex OCR
+- `app/api/enhance/route.ts` — Direct to olmOCR external providers (DeepInfra/Parasail/Cirrascale)
+- `app/api/set-provider/route.ts` — Stores provider config in httpOnly cookie
+- `auth.ts` — NextAuth.js v5 with Google SSO + email allowlist
+- `components/` — React components (CameraCapture, UploadZone, HistoryPanel, Pipeline, ProviderPicker, etc.)
+- `lib/` — Shared types, API client, MathJax loader, olmOCR prompt, providers constant, validation
+- `styles/design-tokens.css` — oklch design system
+- CI/CD: `.github/workflows/ci.yml` — lint, test, Claude Code review, Vercel deploy
 
-**Backend** (`backend/`) — FastAPI served on :8000
+**Backend** (`backend/`) — FastAPI served on :8000 (deployed separately — GPU required)
 - `ocr.py`: `MathOCR` singleton wraps `pix2tex.cli.LatexOCR`. Model loads in background thread at startup via `lifespan`. Inference serialized through `threading.Lock` (pix2tex is not thread-safe). `asyncio.to_thread` keeps FastAPI event loop unblocked. LRU cache (64 entries) keyed on MD5 hash of raw image bytes. Images downscaled to 448px max dimension before inference.
 - `ocr_vlm.py`: `VLMOcr` hits a vLLM OpenAI-compatible API on port 8001 running `allenai/olmOCR-2-7B-1025`. Availability checked lazily on first request. Falls back gracefully if server not running.
 - `main.py`: Four endpoints — `POST /convert` (pix2tex, 90s timeout), `POST /enhance` (olmOCR VLM, 60s timeout), `GET /health`, `GET /vlm/status`. Returns 503 if pix2tex model not yet ready or VLM server unavailable.
@@ -58,7 +71,7 @@ Two-process local app. No build step anywhere.
 - `albumentations==1.4.3` — MUST be pinned. pix2tex 0.1.4 breaks with albumentations 2.x.
 - `pix2tex==0.1.4` — pin to avoid upstream changes.
 - Frontend must be served via HTTP (`python -m http.server`), not `file://` — `getUserMedia` requires secure context.
-- CORS regex `r"http://localhost:\d+"` — backend only accepts localhost origins.
+- CORS regex accepts localhost + `*.vercel.app` origins.
 - `KMP_DUPLICATE_LIB_OK=TRUE` set in `main.py` to suppress OpenMP duplicate lib error on Windows.
 - `confidence` is always `0.85` fixed heuristic for pix2tex (`0.9` for olmOCR) — pix2tex has no confidence API.
 - Blank/solid-color frames trigger a `RuntimeWarning: invalid value encountered in divide` in pix2tex internals — harmless, pix2tex returns empty or garbage LaTeX which the frontend handles.

@@ -1,0 +1,96 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+}
+
+.title {
+  font: var(--t-section);
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: var(--blue);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--sp-3);
+}
+
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.card:hover {
+  background: var(--surface-2);
+  border-color: var(--ink-4);
+}
+
+.selected {
+  border-color: var(--blue);
+  background: var(--blue-bg);
+}
+
+.providerName {
+  font: 700 15px var(--font-ui);
+  color: var(--ink);
+  margin-bottom: var(--sp-2);
+}
+
+.price {
+  font: var(--t-mono-sm);
+  color: var(--ink-3);
+}
+
+.keyInput {
+  width: 100%;
+  margin-top: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--ink);
+  font: var(--t-mono-sm);
+  outline: none;
+}
+
+.keyInput:focus {
+  border-color: var(--border-focus);
+}
+
+.saveBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0.5rem 1.2rem;
+  background: var(--blue);
+  color: var(--surface);
+  border: 1px solid var(--blue);
+  border-radius: var(--r-md);
+  font: var(--t-button);
+  cursor: pointer;
+  transition: all 0.15s;
+  align-self: flex-start;
+}
+
+.saveBtn:hover {
+  background: var(--blue-dim);
+}
+
+.saveBtn:disabled {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--ink-4);
+  cursor: not-allowed;
+}
+
+.status {
+  font: var(--t-mono-sm);
+  color: var(--green);
+}

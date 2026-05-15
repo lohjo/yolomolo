@@ -1,0 +1,105 @@
+.zone {
+  position: relative;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-lg);
+  padding: clamp(2rem, 6vw, 3.5rem) 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: var(--surface-1);
+}
+
+.zone:hover, .dragOver {
+  border-color: var(--amber);
+  background: var(--amber-bg);
+}
+
+.hasFile {
+  border-color: var(--blue);
+  border-style: solid;
+  background: var(--blue-bg);
+}
+
+.icon {
+  font-size: 2rem;
+  color: var(--ink-4);
+  margin-bottom: var(--sp-3);
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.dragOver .icon { color: var(--amber); }
+.hasFile .icon { color: var(--blue); }
+
+.label {
+  font-weight: 600;
+  color: var(--ink-2);
+  font-size: 14px;
+  margin-bottom: var(--sp-1);
+}
+
+.hasFile .label { color: var(--blue); }
+
+.sublabel {
+  font: var(--t-mono-sm);
+  color: var(--ink-4);
+}
+
+.filename {
+  color: var(--blue);
+  font: var(--t-mono-sm);
+  margin-top: var(--sp-2);
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  font: var(--t-button);
+  line-height: 1;
+  transition: all 0.15s;
+}
+
+.btnPrimary {
+  background: var(--blue);
+  color: var(--surface);
+  padding: 0.6rem 1.4rem;
+  border-color: var(--blue);
+}
+
+.btnPrimary:hover { background: var(--blue-dim); border-color: var(--blue-dim); }
+.btnPrimary:disabled {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--ink-4);
+  cursor: not-allowed;
+}
+
+.btnGhost {
+  background: transparent;
+  color: var(--ink-3);
+  padding: 0.55rem 0.75rem;
+  border-color: transparent;
+}
+
+.btnGhost:hover { color: var(--ink-2); background: var(--surface-2); }
+
+.loading::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid color-mix(in oklch, var(--surface) 40%, transparent);
+  border-top-color: var(--surface);
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+}

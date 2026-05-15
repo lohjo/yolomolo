@@ -1,0 +1,53 @@
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem var(--sp-5);
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface-1);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.backLink {
+  font: 600 13px var(--font-ui);
+  color: var(--ink-3);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.backLink:hover {
+  color: var(--ink-2);
+}
+
+.accent {
+  color: var(--blue);
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.statusChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 12px var(--font-ui);
+  color: var(--ink-3);
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
