@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MathScribe — Handwriting to LaTeX</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,700;1,400&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/tabler-icons.min.css">
+  <link rel="stylesheet" href="design-tokens.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <nav class="landing-nav">
+    <a href="landing.html" class="wordmark">Math<span>Scribe</span></a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How it works</a>
+      <a href="https://github.com/lohjo/yolomolo" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <a href="index.html" class="btn btn-primary">
+      <svg class="play-tri" viewBox="0 0 24 24" aria-hidden="true"><polygon points="5,3 19,12 5,21"/></svg>
+      Launch Console
+    </a>
+  </nav>
+
+  <section class="hero">
+    <h1>Convert handwriting<br>to <span class="accent">LaTeX</span>.</h1>
+    <p class="lede">Snap a photo, drop a PDF, or point a camera. olmOCR returns clean LaTeX in under three seconds.</p>
+    <div class="hero-ctas">
+      <a href="index.html" class="btn btn-primary">
+        <svg class="play-tri" viewBox="0 0 24 24" aria-hidden="true"><polygon points="5,3 19,12 5,21"/></svg>
+        Launch Console
+      </a>
+      <a href="#how-it-works" class="btn btn-secondary">
+        See it work
+        <i class="ti ti-arrow-down" aria-hidden="true"></i>
+      </a>
+    </div>
+
+    <div class="hero-equation-showcase" aria-hidden="true">
+      <div class="equation-sample">
+        <div class="equation-top">
+          <span class="sample-hand">&#8747;<sub>0</sub><sup>&infin;</sup> e<sup>&minus;x&sup2;</sup> dx&nbsp;&nbsp;=&nbsp;&nbsp;&radic;&pi; / 2</span>
+        </div>
+        <div class="sample-arrow-bottom">
+          <span class="double-arrow">&#x27F9;</span>
+          <span class="sample-latex">\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-wrap" id="features">
+    <span class="section-label">What it does</span>
+    <div class="features-grid">
+      <div class="feature-card">
+        <i class="ti ti-camera" aria-hidden="true"></i>
+        <h3>Live camera capture</h3>
+        <p>Point your device camera at any handwritten equation. Capture frame-by-frame with sub-second feedback.</p>
+      </div>
+      <div class="feature-card">
+        <i class="ti ti-brain" aria-hidden="true"></i>
+        <h3>pix2tex OCR backend</h3>
+        <p>Powered by pix2tex — an image-to-LaTeX model trained specifically on mathematical notation.</p>
+      </div>
+      <div class="feature-card">
+        <i class="ti ti-copy" aria-hidden="true"></i>
+        <h3>One-click LaTeX export</h3>
+        <p>Copy clean LaTeX or MathJax-wrapped output. Preview renders inline before you commit.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-wrap" id="how-it-works">
+    <span class="section-label">How it works</span>
+    <div class="steps-row">
+      <div class="step">
+        <span class="step-number">01</span>
+        <h4>Snap or upload</h4>
+        <p>Use your camera or drop an image of any handwritten or printed math.</p>
+      </div>
+      <div class="step-connector" aria-hidden="true">→</div>
+      <div class="step">
+        <span class="step-number">02</span>
+        <h4>OCR converts</h4>
+        <p>pix2tex reads the image, identifies equations, and generates LaTeX output.</p>
+      </div>
+      <div class="step-connector" aria-hidden="true">→</div>
+      <div class="step">
+        <span class="step-number">03</span>
+        <h4>Copy and paste</h4>
+        <p>Preview in MathJax, copy the LaTeX, paste directly into your document.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="landing-footer">
+    <span>Math<span style="color: var(--blue)">Scribe</span> · v1.0</span>
+    <span>Built on pix2tex · FastAPI</span>
+    <a href="https://github.com/lohjo/yolomolo" target="_blank" rel="noopener" style="color: var(--ink-3); text-decoration: none;">GitHub →</a>
+  </footer>
+
+</body>
+</html>

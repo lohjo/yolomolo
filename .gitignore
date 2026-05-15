@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.egg-info/
+dist/
+build/
+.env
+.venv/
+venv/
+*.png
+*.jpg
+*.jpeg
+!frontend/*.png

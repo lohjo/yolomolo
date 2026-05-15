@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MathScribe Console — Handwriting to LaTeX</title>
+
+  <script>
+  MathJax = {
+    tex: { inlineMath: [['$','$'], ['\\(','\\)']] },
+    startup: { typeset: false }
+  };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/tabler-icons.min.css">
+  <link rel="stylesheet" href="design-tokens.css">
+  <link rel="stylesheet" href="styles.css">
+
+  <style>
+    canvas { display: none; }
+  </style>
+</head>
+<body>
+
+  <div id="model-banner" class="model-banner loading">Connecting to backend…</div>
+
+  <nav class="topbar">
+    <a href="landing.html" class="back-link">
+      <i class="ti ti-arrow-left" aria-hidden="true"></i>
+      Math<span style="color: var(--blue)">Scribe</span>
+    </a>
+    <div class="status-chip">
+      <span class="status-dot" id="status-dot" style="background: var(--amber)"></span>
+      <span id="status-text">Connecting…</span>
+    </div>
+  </nav>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-panel="camera"  role="tab">Camera</button>
+    <button class="tab"        data-panel="upload"  role="tab">Upload</button>
+    <button class="tab"        data-panel="history" role="tab">History <span class="tab-count" id="history-count">0</span></button>
+  </div>
+
+  <!-- Camera panel -->
+  <div id="panel-camera" class="panel active">
+    <div class="tool-grid">
+      <section>
+        <span class="section-label">Camera feed</span>
+        <div class="camera-panel">
+          <div class="camera-stage" id="camera-stage">Waiting for camera…</div>
+          <video id="video" autoplay playsinline muted class="camera-video" style="display:none"></video>
+          <canvas id="canvas"></canvas>
+          <div class="scan-reticle" aria-hidden="true">
+            <span class="corner tl"></span><span class="corner tr"></span>
+            <span class="corner bl"></span><span class="corner br"></span>
+            <span class="scan-line"></span>
+          </div>
+          <div class="camera-controls">
+            <button class="btn btn-primary" id="btn-capture">Capture</button>
+            <button class="btn btn-ghost" id="btn-flip">
+              <i class="ti ti-refresh" aria-hidden="true"></i>Flip
+            </button>
+          </div>
+        </div>
+        <p style="font: var(--t-mono-sm); color: var(--ink-4); margin-top: 4px;">
+          Auto-captures every 2s when model ready · Ctrl+Enter to force capture
+        </p>
+      </section>
+
+      <section>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span class="section-label" style="margin-bottom: 0;">LaTeX output</span>
+          <div style="display: flex; gap: 6px;">
+            <button class="copy-btn" id="camera-copy-latex">
+              <i class="ti ti-copy" aria-hidden="true"></i>Copy LaTeX
+            </button>
+            <button class="copy-btn" id="camera-copy-mathjax">
+              <i class="ti ti-copy" aria-hidden="true"></i>Copy MathJax
+            </button>
+          </div>
+        </div>
+        <textarea class="latex-code" id="camera-latex" spellcheck="false"
+          aria-label="LaTeX output" aria-live="polite"
+          placeholder="LaTeX appears here after capture…"></textarea>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: var(--sp-3);">
+          <span class="section-label" style="margin-bottom: 0;">Rendered preview</span>
+          <span class="badge badge-blue" id="camera-meta"></span>
+        </div>
+        <div class="preview-box" id="camera-preview">
+          <span style="color: var(--ink-4); font-size: 13px; font-style: italic;">Preview appears here once conversion completes.</span>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Upload panel -->
+  <div id="panel-upload" class="panel">
+    <div class="tool-grid">
+      <section>
+        <span class="section-label">Image source</span>
+        <div class="upload-zone" id="upload-zone" role="button" tabindex="0"
+          aria-label="Upload image of handwritten math">
+          <input type="file" id="file-input" accept="image/*" hidden>
+          <div class="upload-icon" id="upload-icon">⊕</div>
+          <p class="upload-label" id="upload-label">Drop an image or click to browse</p>
+          <p class="upload-sublabel">JPG · PNG · HEIC · WebP</p>
+          <p class="upload-filename" id="upload-filename"></p>
+        </div>
+        <div style="display: flex; gap: var(--sp-3); margin-top: var(--sp-2);">
+          <button class="btn btn-primary" id="btn-convert" disabled>
+            Convert <i class="ti ti-arrow-right" aria-hidden="true"></i>
+          </button>
+          <button class="btn btn-ghost" id="btn-clear">Clear</button>
+        </div>
+
+        <div class="pipeline-box" id="pipeline-box" hidden role="status" aria-live="polite">
+          <div class="pipeline-header">
+            <div class="pipeline-dot" id="pipeline-dot"></div>
+            <span class="pipeline-heading" id="pipeline-heading">Processing</span>
+          </div>
+          <div id="pipeline-steps">
+            <div class="pipeline-step" data-step="preprocess" data-state="pending">
+              <div class="step-icon">○</div>
+              <div class="step-label">Preprocessing image</div>
+              <div class="step-status"></div>
+            </div>
+            <div class="pipeline-step" data-step="inference" data-state="pending">
+              <div class="step-icon">○</div>
+              <div class="step-label">OCR inference</div>
+              <div class="step-status"></div>
+            </div>
+            <div class="pipeline-step" data-step="render" data-state="pending">
+              <div class="step-icon">○</div>
+              <div class="step-label">Rendering preview</div>
+              <div class="step-status"></div>
+            </div>
+          </div>
+          <div class="pipeline-finalizing" id="pipeline-finalizing" hidden>
+            <div class="finalizing-dot"></div><span>Preparing output…</span>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span class="section-label" style="margin-bottom: 0;">LaTeX source</span>
+          <div style="display: flex; gap: 6px;">
+            <button class="copy-btn" id="upload-copy-latex">
+              <i class="ti ti-copy" aria-hidden="true"></i>Copy LaTeX
+            </button>
+            <button class="copy-btn" id="upload-copy-mathjax">
+              <i class="ti ti-copy" aria-hidden="true"></i>Copy MathJax
+            </button>
+          </div>
+        </div>
+        <textarea class="latex-code" id="upload-latex" spellcheck="false"
+          aria-label="LaTeX output" aria-live="polite"
+          placeholder="LaTeX will appear here…"></textarea>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: var(--sp-3);">
+          <span class="section-label" style="margin-bottom: 0;">Rendered preview</span>
+          <span class="badge badge-blue" id="upload-meta">MathJax ready</span>
+        </div>
+        <div class="preview-box" id="upload-preview">
+          <span style="color: var(--ink-4); font-size: 13px; font-style: italic;">Preview appears here once conversion completes.</span>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- History panel -->
+  <div id="panel-history" class="panel">
+    <div style="max-width: 860px; margin: 0 auto; padding: var(--sp-6) clamp(1rem, 5vw, 2.5rem);">
+      <span class="section-label">Recent conversions</span>
+      <div id="history-container" style="border: 1px solid var(--rule); border-radius: var(--r-md); overflow: hidden;">
+        <p style="padding: var(--sp-5); color: var(--ink-4); font: var(--t-mono-sm); text-align: center; margin: 0;">
+          No conversions yet.
+        </p>
+      </div>
+      <p style="margin-top: var(--sp-4); font: var(--t-mono-sm); color: var(--ink-4); margin-bottom: 0;">
+        Last 20 conversions stored in session. Cleared on page reload.
+      </p>
+    </div>
+  </div>
+
+<script>
+const API = 'http://localhost:8000';
+let stream = null;
+let captureTimer = null;
+let inflight = false;
+let modelReady = false;
+let sessionHistory = [];
+let prevFrameData = null;
+let facingMode = 'environment';
+const CAPTURE_MAX_DIM = 448;
+const JPEG_QUALITY = 0.85;
+const CAPTURE_INTERVAL = 2000;
+const DIFF_THRESHOLD = 0.03;
+
+const video       = document.getElementById('video');
+const canvas      = document.getElementById('canvas');
+const ctx         = canvas.getContext('2d', { alpha: false });
+const modelBanner = document.getElementById('model-banner');
+const statusDot   = document.getElementById('status-dot');
+const statusText  = document.getElementById('status-text');
+const cameraStage = document.getElementById('camera-stage');
+
+// ── Tabs ──────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const prev = document.querySelector('.tab.active')?.dataset.panel;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+
+    if (tab.dataset.panel === 'camera') {
+      if (!stream) startCamera();
+      if (modelReady && !captureTimer) startAutoCapture();
+    } else {
+      stopAutoCapture();
+    }
+  });
+});
+
+// ── Status helpers ─────────────────────────────────────────────
+function setStatus(color, text) {
+  statusDot.style.background = color;
+  statusText.textContent = text;
+}
+
+// ── Health polling ─────────────────────────────────────────────
+async function checkHealth() {
+  try {
+    const res = await fetch(`${API}/health`);
+    const data = await res.json();
+    if (data.model_loaded) {
+      modelReady = true;
+      modelBanner.style.display = 'none';
+      setStatus('var(--green)', 'Model ready');
+      const activePanel = document.querySelector('.tab.active')?.dataset.panel;
+      if (activePanel === 'camera' && stream && !captureTimer) startAutoCapture();
+      return;
+    }
+    if (data.loading) {
+      modelBanner.className = 'model-banner loading';
+      modelBanner.textContent = 'Loading OCR model… first run downloads ~100MB';
+      setStatus('var(--amber)', 'Model loading…');
+    }
+    if (data.error) {
+      modelBanner.className = 'model-banner error';
+      modelBanner.textContent = `Model error: ${data.error}`;
+      setStatus('var(--red)', 'Model error');
+      return;
+    }
+  } catch {
+    modelBanner.className = 'model-banner error';
+    modelBanner.textContent = 'Cannot reach backend (http://localhost:8000). Is it running?';
+    setStatus('var(--red)', 'Backend offline');
+  }
+  setTimeout(checkHealth, 2000);
+}
+
+// ── Camera ─────────────────────────────────────────────────────
+async function startCamera() {
+  try {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
+    } catch {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    }
+    video.srcObject = stream;
+    video.style.display = 'block';
+    cameraStage.style.display = 'none';
+    if (!modelReady) setStatus('var(--amber)', 'Camera ready · model loading…');
+  } catch (e) {
+    const msg = e.name === 'NotAllowedError' ? 'Camera permission denied' : `Camera: ${e.message}`;
+    cameraStage.textContent = msg;
+    setStatus('var(--red)', msg);
+  }
+}
+
+function stopCamera() {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    video.srcObject = null;
+    video.style.display = 'none';
+    cameraStage.style.display = '';
+    cameraStage.textContent = 'Camera stopped';
+  }
+}
+
+function startAutoCapture() {
+  if (captureTimer) return;
+  captureTimer = setInterval(() => captureFrame(false), CAPTURE_INTERVAL);
+}
+
+function stopAutoCapture() {
+  clearInterval(captureTimer);
+  captureTimer = null;
+}
+
+function frameDiff(current) {
+  if (!prevFrameData || prevFrameData.length !== current.length) return 1.0;
+  let diff = 0;
+  for (let i = 0; i < current.length; i += 4 * 16) {
+    diff += Math.abs(current[i] - prevFrameData[i]);
+  }
+  return diff / (Math.floor(current.length / 64) * 255);
+}
+
+function captureFrame(force) {
+  if (inflight || !stream || !modelReady) return;
+  const track = stream.getVideoTracks()[0];
+  if (!track) return;
+  const s = track.getSettings();
+  const srcW = s.width  || video.videoWidth  || 640;
+  const srcH = s.height || video.videoHeight || 480;
+  const scale = Math.min(1, CAPTURE_MAX_DIM / Math.max(srcW, srcH));
+  canvas.width  = Math.round(srcW * scale);
+  canvas.height = Math.round(srcH * scale);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const frame = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const diff = frameDiff(frame);
+  prevFrameData = frame;
+  if (!force && diff < DIFF_THRESHOLD) return;
+  canvas.toBlob(blob => { if (blob) sendImage(blob, 'camera'); }, 'image/jpeg', JPEG_QUALITY);
+}
+
+document.getElementById('btn-capture').addEventListener('click', () => captureFrame(true));
+
+document.getElementById('btn-flip').addEventListener('click', async () => {
+  stopAutoCapture();
+  stopCamera();
+  facingMode = facingMode === 'environment' ? 'user' : 'environment';
+  await startCamera();
+  if (modelReady) startAutoCapture();
+});
+
+// ── Upload zone ────────────────────────────────────────────────
+const uploadZone     = document.getElementById('upload-zone');
+const fileInput      = document.getElementById('file-input');
+const uploadIcon     = document.getElementById('upload-icon');
+const uploadLabel    = document.getElementById('upload-label');
+const uploadFilename = document.getElementById('upload-filename');
+const btnConvert     = document.getElementById('btn-convert');
+const btnClear       = document.getElementById('btn-clear');
+let currentFile = null;
+
+function showFile(file) {
+  currentFile = file;
+  uploadZone.classList.add('has-file');
+  uploadIcon.textContent = '✓';
+  uploadLabel.textContent = 'Ready to convert';
+  uploadFilename.textContent = `${file.name} · ${Math.round(file.size / 1024)} KB`;
+  btnConvert.disabled = false;
+}
+
+function clearFile() {
+  currentFile = null;
+  uploadZone.classList.remove('has-file', 'drag-over');
+  uploadIcon.textContent = '⊕';
+  uploadLabel.textContent = 'Drop an image or click to browse';
+  uploadFilename.textContent = '';
+  btnConvert.disabled = true;
+}
+
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) showFile(e.target.files[0]); });
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) showFile(e.dataTransfer.files[0]);
+});
+btnClear.addEventListener('click', clearFile);
+btnConvert.addEventListener('click', () => { if (currentFile && !inflight) sendImage(currentFile, 'upload'); });
+
+// ── Pipeline ───────────────────────────────────────────────────
+const pipelineBox       = document.getElementById('pipeline-box');
+const pipelineHeading   = document.getElementById('pipeline-heading');
+const pipelineFinalizing = document.getElementById('pipeline-finalizing');
+const pipelineDot       = document.getElementById('pipeline-dot');
+
+function setStep(key, state, status) {
+  const el = document.querySelector(`.pipeline-step[data-step="${key}"]`);
+  if (!el) return;
+  el.dataset.state = state;
+  el.querySelector('.step-icon').textContent = { pending: '○', running: '◐', done: '✓', error: '✕' }[state] || '○';
+  const s = el.querySelector('.step-status');
+  if (state === 'running' && status) {
+    s.innerHTML = status + '<span class="step-dot-running"></span>';
+  } else {
+    s.textContent = status || '';
+  }
+}
+
+function resetPipeline() {
+  ['preprocess', 'inference', 'render'].forEach(k => setStep(k, 'pending', ''));
+  pipelineFinalizing.hidden = true;
+  pipelineHeading.textContent = 'Processing';
+  pipelineDot.style.background = 'var(--amber)';
+}
+
+// ── API ────────────────────────────────────────────────────────
+async function sendImage(blob, source) {
+  if (inflight) return;
+  inflight = true;
+
+  if (source === 'upload') {
+    pipelineBox.hidden = false;
+    resetPipeline();
+    btnConvert.disabled = true;
+    btnConvert.classList.add('loading');
+    setStep('preprocess', 'running', 'Binarising…');
+    await new Promise(r => setTimeout(r, 100));
+    setStep('preprocess', 'done', 'done');
+    setStep('inference', 'running', 'Querying OCR…');
+  }
+
+  const form = new FormData();
+  const file = blob instanceof File ? blob : new File([blob], 'capture.jpg', { type: 'image/jpeg' });
+  form.append('image', file);
+
+  const t0 = performance.now();
+  try {
+    const res = await fetch(`${API}/convert`, { method: 'POST', body: form });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const ms = data.elapsed_ms || Math.round(performance.now() - t0);
+
+    if (source === 'upload') {
+      setStep('inference', 'done', `${ms} ms`);
+      setStep('render', 'running', 'Rendering…');
+    }
+
+    if (data.latex) {
+      if (source === 'camera') {
+        document.getElementById('camera-latex').value = data.latex;
+        document.getElementById('camera-meta').textContent = `${ms} ms`;
+        await renderPreview(data.latex, document.getElementById('camera-preview'));
+      } else {
+        document.getElementById('upload-latex').value = data.latex;
+        document.getElementById('upload-meta').textContent = `${ms} ms`;
+        await renderPreview(data.latex, document.getElementById('upload-preview'));
+      }
+      addToHistory(data.latex, ms);
+    }
+
+    if (source === 'upload') {
+      setStep('render', 'done', 'done');
+      pipelineHeading.textContent = 'Done';
+      pipelineDot.style.background = 'var(--green)';
+      pipelineFinalizing.hidden = false;
+    }
+  } catch (e) {
+    if (source === 'upload') {
+      setStep('inference', 'error', e.message);
+      pipelineHeading.textContent = 'Error';
+      pipelineDot.style.background = 'var(--red)';
+    } else {
+      document.getElementById('camera-meta').textContent = e.message;
+    }
+  } finally {
+    inflight = false;
+    if (source === 'upload') {
+      btnConvert.disabled = false;
+      btnConvert.classList.remove('loading');
+      btnConvert.innerHTML = 'Convert <i class="ti ti-arrow-right" aria-hidden="true"></i>';
+    }
+  }
+}
+
+// ── MathJax ────────────────────────────────────────────────────
+async function renderPreview(latex, el) {
+  if (!latex || !el) return;
+  try {
+    if (typeof MathJax !== 'undefined' && MathJax.typesetClear) MathJax.typesetClear([el]);
+    el.innerHTML = `$$${latex}$$`;
+    if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) await MathJax.typesetPromise([el]);
+  } catch { el.textContent = latex; }
+}
+
+document.getElementById('camera-latex').addEventListener('input', e =>
+  renderPreview(e.target.value, document.getElementById('camera-preview')));
+document.getElementById('upload-latex').addEventListener('input', e =>
+  renderPreview(e.target.value, document.getElementById('upload-preview')));
+
+// ── Copy buttons ───────────────────────────────────────────────
+function setupCopy(id, getVal, wrap) {
+  document.getElementById(id)?.addEventListener('click', async () => {
+    let v = getVal();
+    if (wrap && v) v = `$$${v}$$`;
+    if (!v) return;
+    const btn = document.getElementById(id);
+    try { await navigator.clipboard.writeText(v); } catch {}
+    btn.classList.add('copied');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i>Copied';
+    setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 1200);
+  });
+}
+
+setupCopy('camera-copy-latex',   () => document.getElementById('camera-latex').value);
+setupCopy('camera-copy-mathjax', () => document.getElementById('camera-latex').value, true);
+setupCopy('upload-copy-latex',   () => document.getElementById('upload-latex').value);
+setupCopy('upload-copy-mathjax', () => document.getElementById('upload-latex').value, true);
+
+// ── History ────────────────────────────────────────────────────
+const historyContainer = document.getElementById('history-container');
+const historyCount     = document.getElementById('history-count');
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function addToHistory(latex, ms) {
+  const time = new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+  sessionHistory.unshift({ latex, ms, time });
+  if (sessionHistory.length > 20) sessionHistory.pop();
+  renderHistory();
+}
+
+function renderHistory() {
+  historyCount.textContent = sessionHistory.length;
+  if (!sessionHistory.length) {
+    historyContainer.innerHTML = '<p style="padding: var(--sp-5); color: var(--ink-4); font: var(--t-mono-sm); text-align: center; margin: 0;">No conversions yet.</p>';
+    return;
+  }
+  historyContainer.innerHTML = sessionHistory.map((h, i) => `
+    <button class="history-item" type="button" onclick="restoreHistory(${i})">
+      <span class="time">${h.time}</span>
+      <span class="src">${esc(h.latex)}</span>
+      <span class="ms">${h.ms} ms</span>
+    </button>
+    ${i < sessionHistory.length - 1 ? '<div style="height:1px;background:var(--rule)"></div>' : ''}
+  `).join('');
+}
+
+function restoreHistory(i) {
+  const h = sessionHistory[i];
+  if (!h) return;
+  document.getElementById('camera-latex').value = h.latex;
+  document.getElementById('upload-latex').value = h.latex;
+  renderPreview(h.latex, document.getElementById('camera-preview'));
+  renderPreview(h.latex, document.getElementById('upload-preview'));
+  document.querySelector('.tab[data-panel="camera"]').click();
+}
+
+// ── Keyboard shortcuts ─────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') {
+    e.preventDefault();
+    captureFrame(true);
+  }
+});
+
+// ── Init ───────────────────────────────────────────────────────
+checkHealth();
+startCamera();
+</script>
+
+</body>
+</html>
