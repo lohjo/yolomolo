@@ -60,7 +60,10 @@
       "PowerShell(if \\(Test-Path node_modules\\) { \\(Get-ChildItem node_modules -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum\\).Sum / 1MB } else { \"no node_modules\" })",
       "PowerShell(npm cache *)",
       "Bash(npx next *)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Skill(vercel:deploy)",
+      "mcp__plugin_vercel_vercel__list_projects",
+      "mcp__plugin_vercel_vercel__get_project"
     ]
   }
 }
