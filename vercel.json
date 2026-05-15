@@ -4,11 +4,10 @@
   "outputDirectory": ".next",
   "functions": {
     "app/api/enhance/route.ts": { "maxDuration": 90 },
-    "app/api/convert/route.ts": { "maxDuration": 30 }
+    "app/api/convert/route.ts": { "maxDuration": 90 }
   },
   "env": {
-    "NEXTAUTH_URL": "https://mathscribe.vercel.app",
-    "ALLOWED_EMAILS": "lohjohn02@gmail.com"
+    "NEXTAUTH_URL": "https://mathscribe.vercel.app"
   },
   "headers": [
     {

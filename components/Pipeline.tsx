@@ -1,13 +1,21 @@
 "use client"
 
 import styles from "./Pipeline.module.css"
-import type { PipelineStep } from "@/lib/types"
+import type { PipelineStep, PipelineStepKey } from "@/lib/types"
 
 const ICONS: Record<PipelineStep["state"], string> = {
   pending: "○",
   running: "◐",
   done: "✓",
   error: "✕",
+}
+
+const LABELS: Record<PipelineStepKey, string> = {
+  preprocess: "Preprocessing image",
+  segment: "Segmenting regions",
+  inference: "olmOCR VLM inference",
+  postprocess: "Generating LaTeX",
+  render: "Rendering preview",
 }
 
 interface PipelineProps {
@@ -24,7 +32,7 @@ export default function Pipeline({
   showFinalizing,
 }: PipelineProps) {
   return (
-    <div className={styles.box}>
+    <div className={styles.box} role="status" aria-live="polite">
       <div className={styles.header}>
         <div className={styles.dot} style={{ background: dotColor }} />
         <span className={styles.heading}>{heading}</span>
@@ -33,9 +41,10 @@ export default function Pipeline({
         <div
           key={step.key}
           className={`${styles.step} ${styles[step.state]}`}
+          data-state={step.state}
         >
           <div className={styles.icon}>{ICONS[step.state]}</div>
-          <div className={styles.label}>{step.key === "preprocess" ? "Preprocessing image" : step.key === "inference" ? "OCR inference" : "Rendering preview"}</div>
+          <div className={styles.label}>{LABELS[step.key]}</div>
           <div className={styles.status}>
             {step.status}
             {step.state === "running" && step.status && (

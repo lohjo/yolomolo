@@ -33,14 +33,14 @@
 
 ## What It Does
 
-MathScribe converts handwritten or printed math formulas to LaTeX using OCR. Two modes:
+MathScribe converts handwritten or printed math formulas to LaTeX using olmOCR-2-7B via DeepInfra. Two tiers:
 
-| Mode | Model | Speed | Hardware |
-|------|-------|-------|----------|
-| **Fast** | pix2tex (ViT+ResNet encoder, Transformer decoder) | 500ms–4s | CPU or GPU |
-| **Enhanced** | olmOCR-2-7B via vLLM | 5–15s | GPU (12GB+ VRAM) |
+| Mode | Provider | Speed | Notes |
+|------|----------|-------|-------|
+| **Default `/convert`** | DeepInfra olmOCR (server-side key) | 2–6s | Lower `max_tokens` for fast tier; no setup |
+| **Enhanced `/enhance`** | User-configured provider (DeepInfra / Parasail / Cirrascale) | 5–15s | Higher token budget, BYO API key in httpOnly cookie |
 
-The app runs as a **Next.js frontend + FastAPI backend**. The frontend is hosted on Vercel; the backend runs on any machine with a GPU (or CPU for lower throughput).
+The production app is **single-platform on Vercel** — no separate GPU host needed. The `backend/` directory holds an optional FastAPI + pix2tex stack used only for local development or self-hosting.
 
 ---
 
@@ -67,16 +67,14 @@ The app runs as a **Next.js frontend + FastAPI backend**. The frontend is hosted
 Browser
   ↓ HTTPS
 Vercel (Next.js 14 App Router)
-  ├── /api/convert   → proxy → FastAPI :8000  (pix2tex)
-  ├── /api/enhance   → external VLM providers (DeepInfra / Parasail / Cirrascale)
-  └── /api/set-provider  → httpOnly cookie
+  ├── /api/convert       → DeepInfra olmOCR (DEEPINFRA_API_KEY, max_tokens 1024)
+  ├── /api/enhance       → user-configured VLM provider (cookie-stored key)
+  ├── /api/set-provider  → writes httpOnly cookie with provider + API key
+  └── /api/health        → static {model_loaded: true}
 
-FastAPI :8000
-  ├── ocr.py         MathOCR singleton, threading.Lock, asyncio.to_thread, LRU cache
-  └── ocr_vlm.py     olmOCR via vLLM OpenAI-compatible API :8001
-
-vLLM :8001 (optional)
-  └── allenai/olmOCR-2-7B-1025
+Optional local dev:
+  backend/ (FastAPI + pix2tex)  — only if you want pix2tex self-hosted
+  vLLM :8001                    — only if you want olmOCR self-hosted on GPU
 ```
 
 ---
@@ -90,22 +88,25 @@ npm install
 npm run dev       # http://localhost:3000
 ```
 
-### Backend (FastAPI + pix2tex)
+### Backend (optional, local-only)
 
-Python 3.11+ required.
+The Next.js app talks to DeepInfra directly in production. The FastAPI stack is only needed if you want local pix2tex inference. Python 3.11+ required.
 
 ```bash
 pip install -r backend/requirements.txt
 
 # From the backend/ directory:
 python -m uvicorn main:app --reload --port 8000
+
+# Then point Next.js at it
+echo "FASTAPI_BACKEND_URL=http://localhost:8000" >> .env.local
 ```
 
-First run downloads ~100MB OCR model from HuggingFace. A loading banner appears until the model is ready.
+First run downloads ~100MB OCR model from HuggingFace.
 
 > **Critical:** `albumentations==1.4.3` must stay pinned — pix2tex 0.1.4 breaks with albumentations 2.x.
 
-Open http://localhost:3000.
+The production deployment ignores this entirely.
 
 ### Docker
 
@@ -135,13 +136,16 @@ NEXTAUTH_URL=http://localhost:3000
 # Email allowlist (comma-separated)
 ALLOWED_EMAILS=you@example.com
 
-# FastAPI backend URL
-FASTAPI_BACKEND_URL=http://localhost:8000
+# DeepInfra olmOCR (required) — server-side key for /api/convert
+DEEPINFRA_API_KEY=
+
+# Optional: local FastAPI backend (only if running backend/ locally)
+# FASTAPI_BACKEND_URL=http://localhost:8000
 ```
 
-Create Google OAuth credentials at [console.cloud.google.com](https://console.cloud.google.com) → APIs & Services → Credentials.
+Create Google OAuth credentials at [console.cloud.google.com](https://console.cloud.google.com) → APIs & Services → Credentials. Add `https://<your-vercel-domain>/api/auth/callback/google` to Authorized redirect URIs.
 
-For Vercel deployment, set these via `vercel env add` or the Vercel dashboard. `NEXTAUTH_URL` should be your production domain.
+For Vercel deployment, set every variable above via `vercel env add` or the Vercel dashboard. `NEXTAUTH_URL` is pinned to `https://mathscribe.vercel.app` in `vercel.json` — change it there if your domain is different.
 
 ---
 
@@ -199,16 +203,16 @@ python -m training.train --dataset allenai/olmocr-bench --output ./my-checkpoint
 
 ## API Reference
 
-All endpoints served by the FastAPI backend on `:8000`.
+Next.js App Router routes hosted on Vercel.
 
 | Endpoint | Method | Body | Response |
 |----------|--------|------|----------|
-| `/convert` | POST | `multipart/form-data` image | `{latex, confidence, elapsed_ms}` |
-| `/enhance` | POST | `multipart/form-data` image | `{latex, confidence, elapsed_ms, model}` |
-| `/health` | GET | — | `{status, model_loaded, loading, error}` |
-| `/vlm/status` | GET | — | `{available, model, url}` |
+| `/api/convert` | POST | `multipart/form-data` image | `{latex, confidence, elapsed_ms, model}` — calls DeepInfra with `DEEPINFRA_API_KEY` |
+| `/api/enhance` | POST | `multipart/form-data` image | `{latex, confidence, elapsed_ms, model}` — calls user-selected provider via cookie |
+| `/api/health` | GET | — | `{status:"ok", model_loaded:true}` |
+| `/api/set-provider` | POST | `{providerId, apiKey}` | `{ok:true}` — stores provider config in httpOnly cookie |
 
-Returns `503` if the pix2tex model is not yet loaded or the VLM server is unavailable.
+`/convert` returns `503 {code:"NO_KEY"}` if `DEEPINFRA_API_KEY` is missing. `/enhance` returns `503 {code:"NO_PROVIDER"}` if no provider cookie is set.
 
 ---
 

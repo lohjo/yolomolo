@@ -63,7 +63,24 @@
       "Bash(npx vitest *)",
       "Skill(vercel:deploy)",
       "mcp__plugin_vercel_vercel__list_projects",
-      "mcp__plugin_vercel_vercel__get_project"
+      "mcp__plugin_vercel_vercel__get_project",
+      "PowerShell(head *)",
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(xargs grep -l \"canvas\\\\|Canvas\\\\|draw\\\\|sketch\")",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\User\\\\Projects\\\\GitHub\\\\yolomolo\" -Depth 1 | Where-Object { $_.PSIsContainer } | Select-Object Name)",
+      "Bash(mkdir -p /tmp/design)",
+      "Read(//tmp/**)",
+      "Bash(cp \"C:\\\\Users\\\\User\\\\.claude\\\\projects\\\\C--Users-User-Projects-GitHub-yolomolo\\\\d2c9c297-c06d-4a29-91b5-c5b91b4ad311\\\\tool-results\\\\webfetch-1778857430807-qa7b3j.bin\" archive.gz)",
+      "Bash(gunzip -k archive.gz)",
+      "Bash(mkdir -p extracted)",
+      "Bash(tar -xf archive -C extracted)",
+      "Bash(cygpath *)",
+      "Bash(npm run *)",
+      "Bash(curl -sS -o /dev/null -w \"landing=%{http_code} \" http://localhost:3000/)",
+      "Bash(curl -sS http://localhost:3000/api/health)",
+      "Bash(curl -sS http://localhost:3000/)",
+      "Bash(curl -sS -o /dev/null -w \"convert=%{http_code}\\\\n\" -X POST http://localhost:3000/api/convert -F \"image=@nonexistent.png\")",
+      "Bash(curl *)"
     ]
   }
 }

@@ -2,7 +2,9 @@
 
 import { useRef, useEffect, useCallback, useState } from "react"
 import { convertImage } from "@/lib/api-client"
+import { useOcrPipeline } from "@/lib/use-ocr-pipeline"
 import LatexOutput from "./LatexOutput"
+import Pipeline from "./Pipeline"
 import styles from "./CameraCapture.module.css"
 
 const CAPTURE_MAX_DIM = 448
@@ -24,13 +26,16 @@ export default function CameraCapture({
   const streamRef = useRef<MediaStream | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const prevFrameRef = useRef<Uint8ClampedArray | null>(null)
-  const inflightRef = useRef(false)
+  const autoInflightRef = useRef(false)
 
   const [cameraState, setCameraState] = useState("Waiting for camera…")
   const [showVideo, setShowVideo] = useState(false)
-  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment")
-  const [latex, setLatex] = useState("")
-  const [elapsedMs, setElapsedMs] = useState<number | undefined>(undefined)
+  const [facingMode, setFacingMode] = useState<"environment" | "user">(
+    "environment",
+  )
+  const [autoLatex, setAutoLatex] = useState("")
+  const [autoElapsedMs, setAutoElapsedMs] = useState<number | undefined>()
+  const { state: pipeline, run, setLatex } = useOcrPipeline(onResult)
 
   const frameDiff = useCallback((current: Uint8ClampedArray) => {
     const prev = prevFrameRef.current
@@ -42,22 +47,22 @@ export default function CameraCapture({
     return diff / (Math.floor(current.length / 64) * 255)
   }, [])
 
-  const sendImage = useCallback(
+  const sendAuto = useCallback(
     async (blob: Blob) => {
-      if (inflightRef.current) return
-      inflightRef.current = true
+      if (autoInflightRef.current) return
+      autoInflightRef.current = true
       try {
         const file = new File([blob], "capture.jpg", { type: "image/jpeg" })
         const data = await convertImage(file)
         if (data.latex) {
-          setLatex(data.latex)
-          setElapsedMs(data.elapsed_ms)
+          setAutoLatex(data.latex)
+          setAutoElapsedMs(data.elapsed_ms)
           onResult(data.latex, data.elapsed_ms)
         }
-      } catch (e: any) {
-        setElapsedMs(undefined)
+      } catch {
+        setAutoElapsedMs(undefined)
       } finally {
-        inflightRef.current = false
+        autoInflightRef.current = false
       }
     },
     [onResult],
@@ -65,7 +70,8 @@ export default function CameraCapture({
 
   const captureFrame = useCallback(
     (force: boolean) => {
-      if (inflightRef.current || !streamRef.current || !modelReady) return
+      if (!streamRef.current || !modelReady) return
+      if (!force && (autoInflightRef.current || pipeline.inflight)) return
       const video = videoRef.current
       const canvas = canvasRef.current
       if (!video || !canvas) return
@@ -91,13 +97,21 @@ export default function CameraCapture({
       if (!force && diff < DIFF_THRESHOLD) return
       canvas.toBlob(
         (blob) => {
-          if (blob) sendImage(blob)
+          if (!blob) return
+          if (force) {
+            const file = new File([blob], "capture.jpg", {
+              type: "image/jpeg",
+            })
+            run(file)
+          } else {
+            sendAuto(blob)
+          }
         },
         "image/jpeg",
         JPEG_QUALITY,
       )
     },
-    [modelReady, frameDiff, sendImage],
+    [modelReady, frameDiff, sendAuto, run, pipeline.inflight],
   )
 
   const startCamera = useCallback(async () => {
@@ -116,11 +130,12 @@ export default function CameraCapture({
       }
       setShowVideo(true)
       setCameraState("")
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const err = e as { name?: string; message?: string }
       const msg =
-        e.name === "NotAllowedError"
+        err.name === "NotAllowedError"
           ? "Camera permission denied"
-          : `Camera: ${e.message}`
+          : `Camera: ${err.message ?? "unknown error"}`
       setCameraState(msg)
     }
   }, [facingMode])
@@ -146,7 +161,10 @@ export default function CameraCapture({
 
   useEffect(() => {
     if (modelReady && streamRef.current && !timerRef.current) {
-      timerRef.current = setInterval(() => captureFrame(false), CAPTURE_INTERVAL)
+      timerRef.current = setInterval(
+        () => captureFrame(false),
+        CAPTURE_INTERVAL,
+      )
     }
     return () => {
       if (timerRef.current) {
@@ -156,7 +174,7 @@ export default function CameraCapture({
     }
   }, [modelReady, captureFrame])
 
-  const handleFlip = async () => {
+  const handleFlip = () => {
     if (timerRef.current) {
       clearInterval(timerRef.current)
       timerRef.current = null
@@ -182,10 +200,44 @@ export default function CameraCapture({
     return () => document.removeEventListener("keydown", handler)
   }, [captureFrame])
 
+  const displayLatex = pipeline.visible ? pipeline.latex : autoLatex
+  const displayMs = pipeline.visible ? pipeline.elapsedMs : autoElapsedMs
+
+  const handleLatexChange = (v: string) => {
+    if (pipeline.visible) setLatex(v)
+    else setAutoLatex(v)
+  }
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px", background: "var(--rule)", minHeight: "calc(100vh - 120px)" }}>
-      <section style={{ background: "var(--surface)", padding: "var(--sp-5)", display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
-        <span className={styles.hint} style={{ color: "var(--blue)", font: "var(--t-section)", textTransform: "uppercase", letterSpacing: "0.10em" }}>Camera feed</span>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "1px",
+        background: "var(--rule)",
+        minHeight: "calc(100vh - 120px)",
+      }}
+    >
+      <section
+        style={{
+          background: "var(--surface)",
+          padding: "var(--sp-5)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--sp-4)",
+        }}
+      >
+        <span
+          className={styles.hint}
+          style={{
+            color: "var(--blue)",
+            font: "var(--t-section)",
+            textTransform: "uppercase",
+            letterSpacing: "0.10em",
+          }}
+        >
+          Camera feed
+        </span>
         <div className={styles.panel}>
           {!showVideo && <div className={styles.stage}>{cameraState}</div>}
           <video
@@ -208,6 +260,7 @@ export default function CameraCapture({
             <button
               className={`${styles.btn} ${styles.btnPrimary}`}
               onClick={() => captureFrame(true)}
+              disabled={pipeline.inflight}
             >
               Capture
             </button>
@@ -222,13 +275,30 @@ export default function CameraCapture({
         <p className={styles.hint}>
           Auto-captures every 2s when model ready · Ctrl+Enter to force capture
         </p>
+
+        {pipeline.visible && (
+          <Pipeline
+            steps={pipeline.steps}
+            heading={pipeline.heading}
+            dotColor={pipeline.dotColor}
+            showFinalizing={pipeline.showFinalizing}
+          />
+        )}
       </section>
 
-      <section style={{ background: "var(--surface)", padding: "var(--sp-5)", display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
+      <section
+        style={{
+          background: "var(--surface)",
+          padding: "var(--sp-5)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--sp-4)",
+        }}
+      >
         <LatexOutput
-          latex={latex}
-          onLatexChange={setLatex}
-          elapsedMs={elapsedMs}
+          latex={displayLatex}
+          onLatexChange={handleLatexChange}
+          elapsedMs={displayMs}
         />
       </section>
     </div>

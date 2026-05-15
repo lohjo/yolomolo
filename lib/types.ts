@@ -39,8 +39,15 @@ export interface ProviderConfig {
   apiKey: string
 }
 
+export type PipelineStepKey =
+  | "preprocess"
+  | "segment"
+  | "inference"
+  | "postprocess"
+  | "render"
+
 export interface PipelineStep {
-  key: string
+  key: PipelineStepKey
   state: "pending" | "running" | "done" | "error"
   status: string
 }

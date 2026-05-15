@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { checkHealth } from "@/lib/api-client"
 import { loadMathJax } from "@/lib/mathjax"
 import type { HistoryEntry } from "@/lib/types"
 import type { TabId } from "@/components/TabBar"
@@ -14,59 +13,10 @@ import HistoryPanel from "@/components/HistoryPanel"
 
 export default function ConsolePage() {
   const [activeTab, setActiveTab] = useState<TabId>("camera")
-  const [modelReady, setModelReady] = useState(false)
-  const [bannerState, setBannerState] = useState<"loading" | "error" | "hidden">("loading")
-  const [bannerMessage, setBannerMessage] = useState("Connecting to backend…")
-  const [statusColor, setStatusColor] = useState("var(--amber)")
-  const [statusText, setStatusText] = useState("Connecting…")
   const [history, setHistory] = useState<HistoryEntry[]>([])
 
   useEffect(() => {
     loadMathJax()
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function poll() {
-      try {
-        const data = await checkHealth()
-        if (cancelled) return
-
-        if (data.model_loaded) {
-          setModelReady(true)
-          setBannerState("hidden")
-          setStatusColor("var(--green)")
-          setStatusText("Model ready")
-          return
-        }
-        if (data.loading) {
-          setBannerState("loading")
-          setBannerMessage("Loading OCR model… first run downloads ~100MB")
-          setStatusColor("var(--amber)")
-          setStatusText("Model loading…")
-        }
-        if (data.error) {
-          setBannerState("error")
-          setBannerMessage(`Model error: ${data.error}`)
-          setStatusColor("var(--red)")
-          setStatusText("Model error")
-          return
-        }
-      } catch {
-        if (cancelled) return
-        setBannerState("error")
-        setBannerMessage("Cannot reach backend. Is it running?")
-        setStatusColor("var(--red)")
-        setStatusText("Backend offline")
-      }
-      if (!cancelled) setTimeout(poll, 2000)
-    }
-
-    poll()
-    return () => {
-      cancelled = true
-    }
   }, [])
 
   const addToHistory = useCallback((latex: string, ms: number) => {
@@ -81,14 +31,14 @@ export default function ConsolePage() {
     })
   }, [])
 
-  const handleRestore = useCallback((index: number) => {
+  const handleRestore = useCallback(() => {
     setActiveTab("camera")
   }, [])
 
   return (
     <>
-      <Topbar statusColor={statusColor} statusText={statusText} />
-      <ModelBanner state={bannerState} message={bannerMessage} />
+      <Topbar statusColor="var(--green)" statusText="olmOCR ready" />
+      <ModelBanner state="hidden" message="" />
       <TabBar
         active={activeTab}
         onTabChange={setActiveTab}
@@ -96,7 +46,7 @@ export default function ConsolePage() {
       />
 
       <div style={{ display: activeTab === "camera" ? "block" : "none" }}>
-        <CameraCapture modelReady={modelReady} onResult={addToHistory} />
+        <CameraCapture modelReady onResult={addToHistory} />
       </div>
       <div style={{ display: activeTab === "upload" ? "block" : "none" }}>
         <UploadZone onResult={addToHistory} />
