@@ -15,7 +15,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: "${{ env.NODE_VERSION }}" }
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - run: npm ci
       - run: npm run lint
       - run: npm run test
@@ -30,16 +31,20 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with:
+          fetch-depth: 0
       - name: Get diff
         run: git diff origin/${{ github.base_ref }}..HEAD -- '*.ts' '*.tsx' '*.py' > pr.diff
       - name: Claude API review
-        if: ${{ secrets.ANTHROPIC_API_KEY != '' }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY not set, skipping review"
+            exit 0
+          fi
           SYSTEM_PROMPT=$(cat .claude/review-system-prompt.md)
-          DIFF=$(cat pr.diff | head -c 50000)
+          DIFF=$(head -c 50000 pr.diff)
           curl -sf https://api.anthropic.com/v1/messages \
             -H "x-api-key: $ANTHROPIC_API_KEY" \
             -H "anthropic-version: 2023-06-01" \
@@ -49,14 +54,15 @@ jobs:
               max_tokens: 4000,
               system: $sys,
               messages: [{role: "user", content: $diff}]
-            }')" | jq -r '.content[0].text' > review.json
+            }')" | jq -r '.content[0].text' > review.json || true
       - name: Post PR comment
-        if: ${{ hashFiles('review.json') != '' }}
+        if: success()
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
             try {
+              if (!fs.existsSync('review.json')) return;
               const raw = fs.readFileSync('review.json', 'utf8');
               const r = JSON.parse(raw);
               const body = require('./scripts/format-review.js')(r);
@@ -70,8 +76,9 @@ jobs:
               console.log('Review parse/post skipped:', e.message);
             }
       - name: Fail on critical findings
-        if: ${{ hashFiles('review.json') != '' }}
+        if: success()
         run: |
+          if [ ! -f review.json ]; then exit 0; fi
           node -e "
             try {
               const r = require('./review.json')
@@ -83,10 +90,19 @@ jobs:
   vercel-preview:
     runs-on: ubuntu-latest
     needs: [lint-test]
-    if: github.event_name == 'pull_request' && vars.VERCEL_PROJECT_ID != ''
+    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
+      - name: Deploy preview
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "Vercel secrets not configured, skipping preview deploy"
+            exit 0
+          fi
       - uses: amondnet/vercel-action@v25
+        if: success()
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
@@ -95,10 +111,19 @@ jobs:
   vercel-prod:
     runs-on: ubuntu-latest
     needs: lint-test
-    if: github.ref == 'refs/heads/main' && vars.VERCEL_PROJECT_ID != ''
+    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
+      - name: Deploy production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "Vercel secrets not configured, skipping prod deploy"
+            exit 0
+          fi
       - uses: amondnet/vercel-action@v25
+        if: success()
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
