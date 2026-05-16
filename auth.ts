@@ -8,6 +8,7 @@ const ALLOWED = (process.env.ALLOWED_EMAILS ?? "lohjohn02@gmail.com")
   .filter(Boolean)
 
 const config: NextAuthConfig = {
+  trustHost: true,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,

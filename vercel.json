@@ -6,9 +6,6 @@
     "app/api/enhance/route.ts": { "maxDuration": 90 },
     "app/api/convert/route.ts": { "maxDuration": 90 }
   },
-  "env": {
-    "NEXTAUTH_URL": "https://yolomolo.vercel.app"
-  },
   "headers": [
     {
       "source": "/api/(.*)",
