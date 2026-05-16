@@ -79,12 +79,12 @@ export function useOcrPipeline(onResult: (latex: string, ms: number) => void) {
       reset()
 
       updateStep("preprocess", { state: "running", status: "Binarising" })
-      const pre = jitter(120, 240)
+      const pre = jitter(40, 80)
       await sleep(pre)
       updateStep("preprocess", { state: "done", status: `${pre} ms` })
 
       updateStep("segment", { state: "running", status: "Detecting regions" })
-      const seg = jitter(220, 420)
+      const seg = jitter(60, 120)
       await sleep(seg)
       updateStep("segment", { state: "done", status: `${seg} ms` })
 
@@ -115,7 +115,7 @@ export function useOcrPipeline(onResult: (latex: string, ms: number) => void) {
           state: "running",
           status: "Cleaning LaTeX",
         })
-        const post = jitter(120, 280)
+        const post = jitter(30, 60)
         await sleep(post)
         updateStep("postprocess", { state: "done", status: `${post} ms` })
 
@@ -123,7 +123,7 @@ export function useOcrPipeline(onResult: (latex: string, ms: number) => void) {
         setState((prev) => ({ ...prev, latex: data.latex }))
 
         const renderStart = performance.now()
-        await new Promise((r) => setTimeout(r, 60))
+        await new Promise((r) => setTimeout(r, 20))
         const renderMs = Math.round(performance.now() - renderStart)
         updateStep("render", { state: "done", status: `${renderMs} ms` })
 

@@ -1,16 +1,16 @@
 "use client"
 
 import { useRef, useEffect, useCallback, useState } from "react"
-import { convertImage } from "@/lib/api-client"
+import { convertImage, convertImageStream } from "@/lib/api-client"
 import { useOcrPipeline } from "@/lib/use-ocr-pipeline"
 import LatexOutput from "./LatexOutput"
 import Pipeline from "./Pipeline"
 import styles from "./CameraCapture.module.css"
 
-const CAPTURE_MAX_DIM = 448
-const JPEG_QUALITY = 0.85
-const CAPTURE_INTERVAL = 2000
-const DIFF_THRESHOLD = 0.03
+const CAPTURE_MAX_DIM = 384
+const JPEG_QUALITY = 0.75
+const CAPTURE_INTERVAL = 1000
+const DIFF_THRESHOLD = 0.02
 
 interface CameraCaptureProps {
   modelReady: boolean
@@ -53,7 +53,9 @@ export default function CameraCapture({
       autoInflightRef.current = true
       try {
         const file = new File([blob], "capture.jpg", { type: "image/jpeg" })
-        const data = await convertImage(file)
+        const data = await convertImageStream(file, (partial) => {
+          setAutoLatex(partial)
+        })
         if (data.latex) {
           setAutoLatex(data.latex)
           setAutoElapsedMs(data.elapsed_ms)
@@ -273,7 +275,7 @@ export default function CameraCapture({
           </div>
         </div>
         <p className={styles.hint}>
-          Auto-captures every 2s when model ready · Ctrl+Enter to force capture
+          Auto-captures every 1s when model ready · Ctrl+Enter to force capture
         </p>
 
         {pipeline.visible && (

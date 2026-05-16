@@ -8,7 +8,12 @@ const ALLOWED = (process.env.ALLOWED_EMAILS ?? "lohjohn02@gmail.com")
   .filter(Boolean)
 
 const config: NextAuthConfig = {
-  providers: [Google],
+  providers: [
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    }),
+  ],
   pages: {
     signIn: "/auth/signin",
     error: "/auth/error",

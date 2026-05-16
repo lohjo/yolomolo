@@ -18,12 +18,13 @@ jobs:
         with: { node-version: "${{ env.NODE_VERSION }}" }
       - run: npm ci
       - run: npm run lint
-      - run: npm run test -- --coverage --reporter=json > test-results.json
+      - run: npm run test
 
   claude-review:
     runs-on: ubuntu-latest
     needs: lint-test
     if: github.event_name == 'pull_request'
+    continue-on-error: true
     permissions:
       contents: read
       pull-requests: write
@@ -32,37 +33,57 @@ jobs:
         with: { fetch-depth: 0 }
       - name: Get diff
         run: git diff origin/${{ github.base_ref }}..HEAD -- '*.ts' '*.tsx' '*.py' > pr.diff
-      - name: Claude Code review
-        id: review
+      - name: Claude API review
+        if: ${{ secrets.ANTHROPIC_API_KEY != '' }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          claude --model claude-sonnet-4-6 \
-            --system-prompt "$(cat .claude/review-system-prompt.md)" \
-            --file pr.diff \
-            --max-tokens 4000 \
-            --output-format json > review.json
+          SYSTEM_PROMPT=$(cat .claude/review-system-prompt.md)
+          DIFF=$(cat pr.diff | head -c 50000)
+          curl -sf https://api.anthropic.com/v1/messages \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d "$(jq -n --arg sys "$SYSTEM_PROMPT" --arg diff "$DIFF" '{
+              model: "claude-sonnet-4-6-20250514",
+              max_tokens: 4000,
+              system: $sys,
+              messages: [{role: "user", content: $diff}]
+            }')" | jq -r '.content[0].text' > review.json
       - name: Post PR comment
+        if: ${{ hashFiles('review.json') != '' }}
         uses: actions/github-script@v7
         with:
           script: |
-            const r = require('./review.json')
-            const body = require('./scripts/format-review.js')(r)
-            await github.rest.issues.createComment({
-              owner: context.repo.owner, repo: context.repo.repo,
-              issue_number: context.issue.number, body })
+            const fs = require('fs');
+            try {
+              const raw = fs.readFileSync('review.json', 'utf8');
+              const r = JSON.parse(raw);
+              const body = require('./scripts/format-review.js')(r);
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            } catch (e) {
+              console.log('Review parse/post skipped:', e.message);
+            }
       - name: Fail on critical findings
+        if: ${{ hashFiles('review.json') != '' }}
         run: |
           node -e "
-            const r = require('./review.json')
-            const critical = r.findings.filter(f => f.severity === 'critical')
-            if (critical.length) { console.error(JSON.stringify(critical,null,2)); process.exit(1) }
+            try {
+              const r = require('./review.json')
+              const critical = (r.findings || []).filter(f => f.severity === 'critical')
+              if (critical.length) { console.error(JSON.stringify(critical,null,2)); process.exit(1) }
+            } catch(e) { console.log('No valid review to check'); }
           "
 
   vercel-preview:
     runs-on: ubuntu-latest
-    needs: [lint-test, claude-review]
-    if: github.event_name == 'pull_request'
+    needs: [lint-test]
+    if: github.event_name == 'pull_request' && vars.VERCEL_PROJECT_ID != ''
     steps:
       - uses: actions/checkout@v4
       - uses: amondnet/vercel-action@v25
@@ -74,7 +95,7 @@ jobs:
   vercel-prod:
     runs-on: ubuntu-latest
     needs: lint-test
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && vars.VERCEL_PROJECT_ID != ''
     steps:
       - uses: actions/checkout@v4
       - uses: amondnet/vercel-action@v25

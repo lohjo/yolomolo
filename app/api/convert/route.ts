@@ -26,6 +26,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No image provided" }, { status: 400 })
   }
 
+  const wantStream = new URL(request.url).searchParams.get("stream") === "1"
+
   try {
     const arrayBuf = await image.arrayBuffer()
     const b64 = Buffer.from(arrayBuf).toString("base64")
@@ -47,6 +49,7 @@ export async function POST(request: Request) {
       ],
       max_tokens: 1024,
       temperature: 0.1,
+      ...(wantStream ? { stream: true } : {}),
     }
 
     const start = Date.now()
@@ -59,7 +62,6 @@ export async function POST(request: Request) {
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(85_000),
     })
-    const elapsed = Date.now() - start
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
@@ -69,8 +71,62 @@ export async function POST(request: Request) {
       )
     }
 
+    if (wantStream && res.body) {
+      const encoder = new TextEncoder()
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+
+      const stream = new ReadableStream({
+        async start(controller) {
+          let fullLatex = ""
+          try {
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+              const chunk = decoder.decode(value, { stream: true })
+              for (const line of chunk.split("\n")) {
+                if (!line.startsWith("data: ") || line === "data: [DONE]")
+                  continue
+                try {
+                  const json = JSON.parse(line.slice(6))
+                  const delta = json.choices?.[0]?.delta?.content ?? ""
+                  if (delta) {
+                    fullLatex += delta
+                    controller.enqueue(
+                      encoder.encode(
+                        `data: ${JSON.stringify({ latex: fullLatex, partial: true })}\n\n`,
+                      ),
+                    )
+                  }
+                } catch {
+                  // skip malformed SSE lines
+                }
+              }
+            }
+            const elapsed = Date.now() - start
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ latex: fullLatex, partial: false, confidence: 0.9, elapsed_ms: elapsed, model: "olmOCR-2-7B" })}\n\n`,
+              ),
+            )
+          } finally {
+            controller.close()
+          }
+        },
+      })
+
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      })
+    }
+
     const data = await res.json()
     const latex = data.choices?.[0]?.message?.content ?? ""
+    const elapsed = Date.now() - start
 
     return NextResponse.json({
       latex,
