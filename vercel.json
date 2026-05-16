@@ -7,7 +7,7 @@
     "app/api/convert/route.ts": { "maxDuration": 90 }
   },
   "env": {
-    "NEXTAUTH_URL": "https://mathscribe.vercel.app"
+    "NEXTAUTH_URL": "https://yolomolo.vercel.app"
   },
   "headers": [
     {
