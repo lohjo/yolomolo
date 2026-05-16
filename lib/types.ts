@@ -53,7 +53,20 @@ export interface PipelineStep {
 }
 
 export interface HistoryEntry {
+  id?: string
   latex: string
+  rawResponse?: string
   ms: number
   time: string
+  sourceTab?: string
+  synced?: boolean
+}
+
+export interface HistoryEntryServer {
+  id: string
+  latex: string
+  raw_response: string | null
+  elapsed_ms: number
+  source_tab: string
+  created_at: string
 }

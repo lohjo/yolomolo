@@ -1,4 +1,4 @@
-import type { OcrResult, HealthStatus } from "@/lib/types"
+import type { OcrResult, HealthStatus, HistoryEntryServer } from "@/lib/types"
 
 export async function convertImage(file: File): Promise<OcrResult> {
   const form = new FormData()
@@ -92,6 +92,43 @@ export async function checkHealth(): Promise<HealthStatus> {
   }
 
   return res.json()
+}
+
+export async function fetchHistory(
+  limit = 20,
+  offset = 0,
+): Promise<{ entries: HistoryEntryServer[]; total: number }> {
+  const res = await fetch(`/api/history?limit=${limit}&offset=${offset}`)
+  if (!res.ok) return { entries: [], total: 0 }
+  return res.json()
+}
+
+export async function saveHistoryEntry(entry: {
+  latex: string
+  rawResponse?: string
+  elapsedMs: number
+  sourceTab?: string
+}): Promise<{ id: string; created_at: string } | null> {
+  try {
+    const res = await fetch("/api/history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(entry),
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
+}
+
+export async function deleteHistoryEntry(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/history/${id}`, { method: "DELETE" })
+    return res.ok
+  } catch {
+    return false
+  }
 }
 
 export async function setProvider(

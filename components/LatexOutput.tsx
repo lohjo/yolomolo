@@ -1,7 +1,8 @@
 "use client"
 
-import { useRef, useEffect, useCallback, useState } from "react"
+import { useRef, useEffect, useCallback, useState, useMemo } from "react"
 import { renderPreview } from "@/lib/mathjax"
+import { parseOlmOcrResponse } from "@/lib/parse-olmocr"
 import styles from "./LatexOutput.module.css"
 
 interface LatexOutputProps {
@@ -9,6 +10,7 @@ interface LatexOutputProps {
   onLatexChange: (value: string) => void
   elapsedMs?: number
   label?: string
+  onClear?: () => void
 }
 
 export default function LatexOutput({
@@ -16,13 +18,17 @@ export default function LatexOutput({
   onLatexChange,
   elapsedMs,
   label = "LaTeX output",
+  onClear,
 }: LatexOutputProps) {
   const previewRef = useRef<HTMLDivElement>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [metadataOpen, setMetadataOpen] = useState(false)
+
+  const parsed = useMemo(() => parseOlmOcrResponse(latex), [latex])
 
   useEffect(() => {
-    renderPreview(latex, previewRef.current)
-  }, [latex])
+    renderPreview(parsed.equation, previewRef.current)
+  }, [parsed.equation])
 
   const copy = useCallback(
     async (text: string, id: string) => {
@@ -43,16 +49,25 @@ export default function LatexOutput({
         <div className={styles.buttons}>
           <button
             className={`${styles.copyBtn} ${copiedId === "latex" ? styles.copied : ""}`}
-            onClick={() => copy(latex, "latex")}
+            onClick={() => copy(parsed.equation, "latex")}
           >
             {copiedId === "latex" ? "Copied" : "Copy LaTeX"}
           </button>
           <button
             className={`${styles.copyBtn} ${copiedId === "mathjax" ? styles.copied : ""}`}
-            onClick={() => copy(latex ? `$$${latex}$$` : "", "mathjax")}
+            onClick={() => copy(parsed.equation ? `$$${parsed.equation}$$` : "", "mathjax")}
           >
             {copiedId === "mathjax" ? "Copied" : "Copy MathJax"}
           </button>
+          {onClear && (
+            <button
+              className={styles.clearBtn}
+              onClick={onClear}
+              disabled={!latex}
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
@@ -80,6 +95,34 @@ export default function LatexOutput({
           </span>
         )}
       </div>
+
+      {parsed.metadata && (
+        <div className={styles.accordion}>
+          <button
+            className={styles.accordionToggle}
+            onClick={() => setMetadataOpen((v) => !v)}
+            aria-expanded={metadataOpen}
+          >
+            <span
+              className={styles.chevron}
+              style={{ transform: metadataOpen ? "rotate(90deg)" : undefined }}
+            >
+              &#9654;
+            </span>
+            Metadata
+          </button>
+          {metadataOpen && (
+            <div className={styles.metadataGrid}>
+              {Object.entries(parsed.metadata).map(([key, val]) => (
+                <div key={key} className={styles.metadataRow}>
+                  <span className={styles.metadataKey}>{key}</span>
+                  <span className={styles.metadataVal}>{String(val)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

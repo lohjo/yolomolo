@@ -80,7 +80,22 @@
       "Bash(curl -sS http://localhost:3000/api/health)",
       "Bash(curl -sS http://localhost:3000/)",
       "Bash(curl -sS -o /dev/null -w \"convert=%{http_code}\\\\n\" -X POST http://localhost:3000/api/convert -F \"image=@nonexistent.png\")",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(Select-Object Name)",
+      "PowerShell(Get-ChildItem C:\\\\Users\\\\User\\\\Projects\\\\GitHub\\\\yolomolo -Force | Where-Object { $_.Name -notin @\\('node_modules','backend','.git','.next'\\) } | Format-Table Name, PSIsContainer, Length -AutoSize)",
+      "Bash(gh run *)",
+      "Bash(gh api *)",
+      "mcp__plugin_vercel_vercel__list_teams",
+      "mcp__plugin_vercel_vercel__list_deployments",
+      "mcp__plugin_vercel_vercel__get_deployment_build_logs",
+      "mcp__plugin_vercel_vercel__get_runtime_logs",
+      "mcp__plugin_vercel_vercel__web_fetch_vercel_url",
+      "WebFetch(domain:mathscribe.vercel.app)",
+      "WebFetch(domain:yolomolo.vercel.app)",
+      "WebFetch(domain:yolomolo-git-main-lohjos-projects.vercel.app)",
+      "Bash(psql *)",
+      "Bash(node *)",
+      "Bash(npm list *)"
     ]
   }
 }

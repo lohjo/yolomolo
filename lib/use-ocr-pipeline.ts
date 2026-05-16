@@ -72,6 +72,20 @@ export function useOcrPipeline(onResult: (latex: string, ms: number) => void) {
     setState((prev) => ({ ...prev, latex }))
   }, [])
 
+  const clear = useCallback(() => {
+    setState({
+      steps: INITIAL.map((s) => ({ ...s })),
+      heading: "Processing",
+      dotColor: "var(--amber)",
+      showFinalizing: false,
+      visible: false,
+      latex: "",
+      elapsedMs: undefined,
+      inflight: false,
+      error: undefined,
+    })
+  }, [])
+
   const run = useCallback(
     async (file: File) => {
       if (state.inflight) return
@@ -158,5 +172,5 @@ export function useOcrPipeline(onResult: (latex: string, ms: number) => void) {
     setState((prev) => ({ ...prev, visible: false }))
   }, [])
 
-  return { state, run, hide, setLatex, previewRef }
+  return { state, run, hide, setLatex, clear, previewRef }
 }

@@ -63,6 +63,45 @@
   background: var(--rule);
 }
 
+.itemRow {
+  display: flex;
+  align-items: center;
+}
+
+.sourceBadge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+
+.deleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink-4);
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: var(--sp-2);
+  transition: all 0.15s;
+}
+
+.deleteBtn:hover {
+  color: var(--red);
+  background: var(--red-bg);
+}
+
 .hint {
   margin-top: var(--sp-4);
   font: var(--t-mono-sm);

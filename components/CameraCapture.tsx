@@ -5,6 +5,7 @@ import { convertImage, convertImageStream } from "@/lib/api-client"
 import { useOcrPipeline } from "@/lib/use-ocr-pipeline"
 import LatexOutput from "./LatexOutput"
 import Pipeline from "./Pipeline"
+import SplitPane from "./SplitPane"
 import styles from "./CameraCapture.module.css"
 
 const CAPTURE_MAX_DIM = 384
@@ -35,7 +36,7 @@ export default function CameraCapture({
   )
   const [autoLatex, setAutoLatex] = useState("")
   const [autoElapsedMs, setAutoElapsedMs] = useState<number | undefined>()
-  const { state: pipeline, run, setLatex } = useOcrPipeline(onResult)
+  const { state: pipeline, run, setLatex, clear } = useOcrPipeline(onResult)
 
   const frameDiff = useCallback((current: Uint8ClampedArray) => {
     const prev = prevFrameRef.current
@@ -210,99 +211,84 @@ export default function CameraCapture({
     else setAutoLatex(v)
   }
 
+  const handleClear = () => {
+    clear()
+    setAutoLatex("")
+    setAutoElapsedMs(undefined)
+  }
+
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: "1px",
-        background: "var(--rule)",
-        minHeight: "calc(100vh - 120px)",
-      }}
-    >
-      <section
-        style={{
-          background: "var(--surface)",
-          padding: "var(--sp-5)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--sp-4)",
-        }}
-      >
-        <span
-          className={styles.hint}
-          style={{
-            color: "var(--blue)",
-            font: "var(--t-section)",
-            textTransform: "uppercase",
-            letterSpacing: "0.10em",
-          }}
-        >
-          Camera feed
-        </span>
-        <div className={styles.panel}>
-          {!showVideo && <div className={styles.stage}>{cameraState}</div>}
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className={styles.video}
-            style={{ display: showVideo ? "block" : "none" }}
-          />
-          <canvas ref={canvasRef} style={{ display: "none" }} />
-          <div className={styles.reticle} aria-hidden="true">
-            <span className={`${styles.corner} ${styles.tl}`} />
-            <span className={`${styles.corner} ${styles.tr}`} />
-            <span className={`${styles.corner} ${styles.bl}`} />
-            <span className={`${styles.corner} ${styles.br}`} />
-            <span className={styles.scanLine} />
+    <SplitPane
+      storageKey="ms-split-camera"
+      left={
+        <>
+          <span
+            className={styles.hint}
+            style={{
+              color: "var(--blue)",
+              font: "var(--t-section)",
+              textTransform: "uppercase",
+              letterSpacing: "0.10em",
+            }}
+          >
+            Camera feed
+          </span>
+          <div className={styles.panel}>
+            {!showVideo && <div className={styles.stage}>{cameraState}</div>}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={styles.video}
+              style={{ display: showVideo ? "block" : "none" }}
+            />
+            <canvas ref={canvasRef} style={{ display: "none" }} />
+            <div className={styles.reticle} aria-hidden="true">
+              <span className={`${styles.corner} ${styles.tl}`} />
+              <span className={`${styles.corner} ${styles.tr}`} />
+              <span className={`${styles.corner} ${styles.bl}`} />
+              <span className={`${styles.corner} ${styles.br}`} />
+              <span className={styles.scanLine} />
+            </div>
+            <div className={styles.controls}>
+              <button
+                className={`${styles.btn} ${styles.btnPrimary}`}
+                onClick={() => captureFrame(true)}
+                disabled={pipeline.inflight}
+              >
+                Capture
+              </button>
+              <button
+                className={`${styles.btn} ${styles.btnGhost}`}
+                onClick={handleFlip}
+              >
+                Flip
+              </button>
+            </div>
           </div>
-          <div className={styles.controls}>
-            <button
-              className={`${styles.btn} ${styles.btnPrimary}`}
-              onClick={() => captureFrame(true)}
-              disabled={pipeline.inflight}
-            >
-              Capture
-            </button>
-            <button
-              className={`${styles.btn} ${styles.btnGhost}`}
-              onClick={handleFlip}
-            >
-              Flip
-            </button>
-          </div>
-        </div>
-        <p className={styles.hint}>
-          Auto-captures every 1s when model ready · Ctrl+Enter to force capture
-        </p>
+          <p className={styles.hint}>
+            Auto-captures every 1s when model ready · Ctrl+Enter to force capture
+          </p>
 
-        {pipeline.visible && (
-          <Pipeline
-            steps={pipeline.steps}
-            heading={pipeline.heading}
-            dotColor={pipeline.dotColor}
-            showFinalizing={pipeline.showFinalizing}
-          />
-        )}
-      </section>
-
-      <section
-        style={{
-          background: "var(--surface)",
-          padding: "var(--sp-5)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--sp-4)",
-        }}
-      >
+          {pipeline.visible && (
+            <Pipeline
+              steps={pipeline.steps}
+              heading={pipeline.heading}
+              dotColor={pipeline.dotColor}
+              showFinalizing={pipeline.showFinalizing}
+            />
+          )}
+        </>
+      }
+      right={
         <LatexOutput
           latex={displayLatex}
           onLatexChange={handleLatexChange}
           elapsedMs={displayMs}
+          onClear={handleClear}
         />
-      </section>
-    </div>
+      }
+    />
   )
 }
